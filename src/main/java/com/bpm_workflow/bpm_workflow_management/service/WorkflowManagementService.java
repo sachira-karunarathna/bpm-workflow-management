@@ -1,11 +1,12 @@
 package com.bpm_workflow.bpm_workflow_management.service;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface WorkflowManagementService {
 
-    String getAllWorkflows();
+    ResponseEntity<String> getAllWorkflows();
 
-    String uploadWorkflowFile(MultipartFile file);
+    ResponseEntity<String> uploadWorkflowFile(MultipartFile file);
 
 }

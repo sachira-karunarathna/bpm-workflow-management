@@ -1,9 +1,10 @@
 package com.bpm_workflow.bpm_workflow_management.controller;
 
+import com.bpm_workflow.bpm_workflow_management.service.WorkflowManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,10 +15,17 @@ import org.springframework.web.multipart.MultipartFile;
 @Tag(name = "Workflows Management", description = "Workflows Management Endpoints")
 public class WorkflowManagementController {
 
+    private final WorkflowManagementService workflowManagementService;
+
+    @Autowired
+    public WorkflowManagementController(WorkflowManagementService workflowManagementService) {
+        this.workflowManagementService = workflowManagementService;
+    }
+
     @Operation(summary = "Get All Workflows", description = "Get all available workflows")
     @GetMapping(name = "/")
-    public String getAllWorkflows() {
-        return "All workflows!";
+    public ResponseEntity<String> getAllWorkflows() {
+        return workflowManagementService.getAllWorkflows();
     }
 
     @Operation(summary = "Upload Workflow", description = "Upload an XML file for workflow processing")
@@ -26,21 +34,8 @@ public class WorkflowManagementController {
             @Parameter(description = "XML file to upload", required = true)
             @RequestPart("file") MultipartFile file) {
 
-        if (file.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No file uploaded!");
-        }
+        return workflowManagementService.uploadWorkflowFile(file);
 
-        try {
-            String fileName = file.getOriginalFilename();
-
-            if (!fileName.endsWith(".xml")) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("File should be a XML file!");
-            }
-
-            return ResponseEntity.ok("Workflow uploaded: " + fileName);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing file: " + e.getMessage());
-        }
     }
 
 }
