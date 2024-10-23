@@ -8,11 +8,17 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "workflows")
 public class Workflow {
+
     @Id
     @GeneratedValue
     private Long id;
 
     private String workflowId;
 
+    private String referenceId;
+
     private String workflowName;
+
+    private String metaData;
+
 }
