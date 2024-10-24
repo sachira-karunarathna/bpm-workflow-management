@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class WorkflowDTO {
-    private String workflowId;
-    private String workflowName;
+public class DeploymentDTO {
+    private String id;
+    private String name;
+    private String key;
+    private String deployTime;
+    private String version;
 }

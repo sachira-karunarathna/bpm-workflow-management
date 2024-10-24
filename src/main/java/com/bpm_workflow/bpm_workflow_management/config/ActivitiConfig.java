@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class ActivitiConfig {
 
-    @Value("${ACTIVITI_DB_URL}")
+    @Value("${DB_URL}")
     private String dbUrl;
 
     @Value("${DB_USERNAME}")
