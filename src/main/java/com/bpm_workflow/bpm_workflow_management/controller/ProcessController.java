@@ -1,11 +1,14 @@
 package com.bpm_workflow.bpm_workflow_management.controller;
 
 import com.bpm_workflow.bpm_workflow_management.dto.ProcessDefinitionDTO;
+import com.bpm_workflow.bpm_workflow_management.dto.ProcessInstanceDTO;
 import com.bpm_workflow.bpm_workflow_management.dto.ResponseModel;
+import com.bpm_workflow.bpm_workflow_management.dto.StartProcessDTO;
 import com.bpm_workflow.bpm_workflow_management.service.ProcessService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,16 +26,33 @@ public class ProcessController {
         this.processService = processService;
     }
 
+    @Operation(summary = "Process Instance", description = "Get a single process instance")
+    @GetMapping("/{processInstanceId}")
+    public ResponseEntity<ResponseModel<ProcessInstanceDTO>> getProcessInstance(
+            @PathVariable String processInstanceId) {
+        return processService.getProcessInstance(processInstanceId);
+    }
+
     @Operation(summary = "Deployed Processes", description = "Get all deployed processes")
-    @GetMapping("/deployments")
+    @GetMapping(value = "/deployments", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ResponseModel<List<ProcessDefinitionDTO>>> getAllDeployedProcesses() {
         return processService.getDeployedProcesses();
     }
 
     @Operation(summary = "Active Processes", description = "Get all active processes")
     @GetMapping("/active")
-    public ResponseEntity<String> getAllActiveProcesses() {
+    public ResponseEntity<ResponseModel<List<ProcessInstanceDTO>>> getAllActiveProcesses() {
         return processService.getAllActiveProcesses();
+    }
+
+    @Operation(summary = "Start Process Instance", description = "Start a process instance")
+    @PostMapping("/start/{processDefinitionKey}")
+    public ResponseEntity<ResponseModel<ProcessInstanceDTO>> startProcessInstance(
+            @PathVariable String processDefinitionKey,
+            @RequestBody StartProcessDTO request
+    ) {
+        System.out.println(request.getBusinessKey());
+        return processService.startProcessInstance(processDefinitionKey, request.getBusinessKey());
     }
 
     @Operation(summary = "Delete a Deployed Process", description = "Delete a deployed process using deployment ID")

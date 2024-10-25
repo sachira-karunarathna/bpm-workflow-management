@@ -17,11 +17,18 @@ public class DeploymentMapper {
     }
 
     public DeploymentDTO toDto(Deployment deployment) {
-        return modelMapper.map(deployment, DeploymentDTO.class);
+        return new DeploymentDTO(
+                deployment.getId(),
+                deployment.getName(),
+                deployment.getKey(),
+                deployment.getDeploymentTime(),
+                deployment.getVersion()
+        );
+//        return modelMapper.map(deployment, DeploymentDTO.class);
     }
 
-    public Deployment toEntity(DeploymentDTO deploymentDTO) {
-        return modelMapper.map(deploymentDTO, Deployment.class);
-    }
+//    public Deployment toEntity(DeploymentDTO deploymentDTO) {
+//        return modelMapper.map(deploymentDTO, Deployment.class);
+//    }
 
 }

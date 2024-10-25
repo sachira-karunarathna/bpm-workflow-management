@@ -17,11 +17,20 @@ public class ProcessDefinitionMapper {
     }
 
     public ProcessDefinitionDTO toDto(ProcessDefinition processDefinition) {
-        return modelMapper.map(processDefinition, ProcessDefinitionDTO.class);
+        return new ProcessDefinitionDTO(
+                processDefinition.getId(),
+                processDefinition.getName(),
+                processDefinition.getDescription(),
+                processDefinition.getKey(),
+                processDefinition.getVersion(),
+                processDefinition.getDeploymentId(),
+                processDefinition.isSuspended()
+        );
+//        return modelMapper.map(processDefinition, ProcessDefinitionDTO.class);
     }
 
-    public ProcessDefinition toEntity(ProcessDefinitionDTO processDefinitionDTO) {
-        return modelMapper.map(processDefinitionDTO, ProcessDefinition.class);
-    }
+//    public ProcessDefinition toEntity(ProcessDefinitionDTO processDefinitionDTO) {
+//        return modelMapper.map(processDefinitionDTO, ProcessDefinition.class);
+//    }
 
 }

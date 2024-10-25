@@ -1,10 +1,12 @@
 package com.bpm_workflow.bpm_workflow_management.service.impl;
 
 import com.bpm_workflow.bpm_workflow_management.dto.ProcessDefinitionDTO;
+import com.bpm_workflow.bpm_workflow_management.dto.ProcessInstanceDTO;
 import com.bpm_workflow.bpm_workflow_management.dto.ResponseModel;
 import com.bpm_workflow.bpm_workflow_management.service.ProcessService;
 import com.bpm_workflow.bpm_workflow_management.util.Helpers;
 import com.bpm_workflow.bpm_workflow_management.util.ProcessDefinitionMapper;
+import com.bpm_workflow.bpm_workflow_management.util.ProcessInstanceMapper;
 import org.activiti.engine.RepositoryService;
 import org.activiti.engine.RuntimeService;
 import org.activiti.engine.repository.Deployment;
@@ -12,6 +14,7 @@ import org.activiti.engine.repository.ProcessDefinition;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,6 +28,8 @@ public class ProcessServiceImpl implements ProcessService {
 
     private final ProcessDefinitionMapper processDefinitionMapper;
 
+    private final ProcessInstanceMapper processInstanceMapper;
+
     private final RuntimeService runtimeService;
 
     private final RepositoryService repositoryService;
@@ -32,10 +37,12 @@ public class ProcessServiceImpl implements ProcessService {
     @Autowired
     public ProcessServiceImpl(RuntimeService runtimeService,
                               RepositoryService repositoryService,
-                              ProcessDefinitionMapper processDefinitionMapper) {
+                              ProcessDefinitionMapper processDefinitionMapper,
+                              ProcessInstanceMapper processInstanceMapper) {
         this.runtimeService = runtimeService;
         this.repositoryService = repositoryService;
         this.processDefinitionMapper = processDefinitionMapper;
+        this.processInstanceMapper = processInstanceMapper;
     }
 
     @Override
@@ -61,14 +68,69 @@ public class ProcessServiceImpl implements ProcessService {
     }
 
     @Override
-    public ResponseEntity<String> getAllActiveProcesses() {
+    public ResponseEntity<ResponseModel<List<ProcessInstanceDTO>>> getAllActiveProcesses() {
         try {
             List<ProcessInstance> activeProcesses = runtimeService.createProcessInstanceQuery()
                     .active()
                     .list();
-            return ResponseEntity.status(HttpStatus.OK).body(activeProcesses.toString());
+            List<ProcessInstanceDTO> result = activeProcesses.stream().map(processInstanceMapper::toDto).toList();
+            ResponseModel<List<ProcessInstanceDTO>> response = new ResponseModel<>(
+                    false,
+                    HttpStatus.OK.toString(),
+                    "Active process instances retrieved successfully",
+                    result
+            );
+            return ResponseEntity.status(HttpStatus.OK).body(response);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            List<ProcessInstanceDTO> emptyList = new ArrayList<>();
+            ResponseModel<List<ProcessInstanceDTO>> response = new ResponseModel<>(
+                    true,
+                    HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+                    e.getMessage(),
+                    emptyList);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @Override
+    public ResponseEntity<ResponseModel<ProcessInstanceDTO>> getProcessInstance(String processInstanceId) {
+        try {
+            ProcessInstance processInstance = runtimeService.createProcessInstanceQuery().processInstanceId(processInstanceId).singleResult();
+            ProcessInstanceDTO result = processInstanceMapper.toDto(processInstance);
+            ResponseModel<ProcessInstanceDTO> response = new ResponseModel<>(
+                    false,
+                    HttpStatus.OK.toString(),
+                    "Retrieve process instance successfully",
+                    result
+            );
+            return ResponseEntity.status(HttpStatus.OK).body(response);
+        } catch (Exception e) {
+            ResponseModel<ProcessInstanceDTO> response = new ResponseModel<>(
+                    true,
+                    HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+                    e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @Override
+    public ResponseEntity<ResponseModel<ProcessInstanceDTO>> startProcessInstance(String processDefinitionKey, String businessKey) {
+        try {
+            ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(processDefinitionKey, businessKey);
+            ProcessInstanceDTO result = processInstanceMapper.toDto(processInstance);
+            ResponseModel<ProcessInstanceDTO> response = new ResponseModel<>(
+                    false,
+                    HttpStatus.OK.toString(),
+                    "Start process instance successfully",
+                    result
+            );
+            return ResponseEntity.status(HttpStatus.OK).body(response);
+        } catch (Exception e) {
+            ResponseModel<ProcessInstanceDTO> response = new ResponseModel<>(
+                    true,
+                    HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+                    e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
