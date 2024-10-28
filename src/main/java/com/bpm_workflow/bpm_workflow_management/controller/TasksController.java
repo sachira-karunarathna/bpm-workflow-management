@@ -1,17 +1,16 @@
 package com.bpm_workflow.bpm_workflow_management.controller;
 
-import com.bpm_workflow.bpm_workflow_management.dto.ProcessInstanceDTO;
 import com.bpm_workflow.bpm_workflow_management.dto.ResponseModel;
+import com.bpm_workflow.bpm_workflow_management.dto.TaskDTO;
 import com.bpm_workflow.bpm_workflow_management.service.TasksService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.activiti.engine.history.HistoricActivityInstance;
+import org.activiti.engine.history.HistoricTaskInstance;
 import org.activiti.engine.task.Task;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -29,9 +28,40 @@ public class TasksController {
 
     @Operation(summary = "Tasks of a Process", description = "Get all tasks of a given process")
     @GetMapping("/{processInstanceId}")
-    public ResponseEntity<ResponseModel<List<Task>>> getAllTasks(
+    public ResponseEntity<ResponseModel<List<TaskDTO>>> getAllTasks(
             @PathVariable String processInstanceId) {
         return tasksService.getAllTasks(processInstanceId);
+    }
+
+    @Operation(summary = "Completed Tasks of a Process", description = "Get all completed tasks of a given process")
+    @GetMapping("/completed")
+    public ResponseEntity<ResponseModel<List<HistoricTaskInstance>>> getAllCompletedTasks(
+            @RequestParam String processInstanceId
+    ) {
+        return tasksService.getAllCompletedTasks(processInstanceId);
+    }
+
+    @Operation(summary = "Current Tasks of a Process", description = "Get all current tasks of a given process")
+    @GetMapping("/current")
+    public ResponseEntity<ResponseModel<List<TaskDTO>>> getAllCurrentTasks(
+            @RequestParam String processInstanceId
+    ) {
+        return tasksService.getAllCurrentTasks(processInstanceId);
+    }
+
+    @Operation(summary = "Historic Activities of a Process", description = "Get all historic activities of a given process")
+    @GetMapping("/historic-activities")
+    public ResponseEntity<ResponseModel<List<HistoricActivityInstance>>> getAllHistoricActivities(
+            @RequestParam String processInstanceId
+    ) {
+        return tasksService.getAllHistoricActivities(processInstanceId);
+    }
+
+    @Operation(summary = "Complete a Task", description = "Completed a task of a process instance")
+    @PostMapping("/complete/{taskId}")
+    public ResponseEntity<ResponseModel<TaskDTO>> completeATask(
+            @PathVariable String taskId) {
+        return tasksService.completeATask(taskId);
     }
 
 }

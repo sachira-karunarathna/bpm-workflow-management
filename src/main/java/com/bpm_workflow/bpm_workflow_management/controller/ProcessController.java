@@ -3,10 +3,11 @@ package com.bpm_workflow.bpm_workflow_management.controller;
 import com.bpm_workflow.bpm_workflow_management.dto.ProcessDefinitionDTO;
 import com.bpm_workflow.bpm_workflow_management.dto.ProcessInstanceDTO;
 import com.bpm_workflow.bpm_workflow_management.dto.ResponseModel;
-import com.bpm_workflow.bpm_workflow_management.dto.StartProcessDTO;
+import com.bpm_workflow.bpm_workflow_management.dto.SelectProcessDTO;
 import com.bpm_workflow.bpm_workflow_management.service.ProcessService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.activiti.engine.history.HistoricProcessInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -45,13 +46,21 @@ public class ProcessController {
         return processService.getAllActiveProcesses();
     }
 
+    @Operation(summary = "Completed Processes", description = "Get all completed processes")
+    @GetMapping("/completed")
+    public ResponseEntity<ResponseModel<List<HistoricProcessInstance>>> getAllCompletedProcesses() {
+        return processService.getAllCompletedProcesses();
+    }
+
     @Operation(summary = "Start Process Instance", description = "Start a process instance")
     @PostMapping("/start/{processDefinitionKey}")
     public ResponseEntity<ResponseModel<ProcessInstanceDTO>> startProcessInstance(
             @PathVariable String processDefinitionKey,
-            @RequestBody StartProcessDTO request
+            @RequestBody SelectProcessDTO request
     ) {
-        System.out.println(request.getBusinessKey());
+        if(request.getVariables() != null) {
+            return processService.startProcessInstance(processDefinitionKey, request.getBusinessKey(), request.getVariables());
+        }
         return processService.startProcessInstance(processDefinitionKey, request.getBusinessKey());
     }
 

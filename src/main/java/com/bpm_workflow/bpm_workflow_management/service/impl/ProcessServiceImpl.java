@@ -7,14 +7,15 @@ import com.bpm_workflow.bpm_workflow_management.service.ProcessService;
 import com.bpm_workflow.bpm_workflow_management.util.Helpers;
 import com.bpm_workflow.bpm_workflow_management.util.ProcessDefinitionMapper;
 import com.bpm_workflow.bpm_workflow_management.util.ProcessInstanceMapper;
+import org.activiti.engine.HistoryService;
 import org.activiti.engine.RepositoryService;
 import org.activiti.engine.RuntimeService;
+import org.activiti.engine.history.HistoricProcessInstance;
 import org.activiti.engine.repository.Deployment;
 import org.activiti.engine.repository.ProcessDefinition;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ProcessServiceImpl implements ProcessService {
@@ -34,13 +36,17 @@ public class ProcessServiceImpl implements ProcessService {
 
     private final RepositoryService repositoryService;
 
+    private final HistoryService historyService;
+
     @Autowired
     public ProcessServiceImpl(RuntimeService runtimeService,
                               RepositoryService repositoryService,
+                              HistoryService historyService,
                               ProcessDefinitionMapper processDefinitionMapper,
                               ProcessInstanceMapper processInstanceMapper) {
         this.runtimeService = runtimeService;
         this.repositoryService = repositoryService;
+        this.historyService = historyService;
         this.processDefinitionMapper = processDefinitionMapper;
         this.processInstanceMapper = processInstanceMapper;
     }
@@ -93,6 +99,27 @@ public class ProcessServiceImpl implements ProcessService {
     }
 
     @Override
+    public ResponseEntity<ResponseModel<List<HistoricProcessInstance>>> getAllCompletedProcesses() {
+        try {
+            List<HistoricProcessInstance> completedProcesses = historyService.createHistoricProcessInstanceQuery().finished().list();
+
+            ResponseModel<List<HistoricProcessInstance>> response = new ResponseModel<>(
+                    false,
+                    HttpStatus.OK.toString(),
+                    "Retrieve completed process instance successfully",
+                    completedProcesses
+            );
+            return ResponseEntity.status(HttpStatus.OK).body(response);
+        } catch (Exception e) {
+            ResponseModel<List<HistoricProcessInstance>> response = new ResponseModel<>(
+                    true,
+                    HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+                    e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @Override
     public ResponseEntity<ResponseModel<ProcessInstanceDTO>> getProcessInstance(String processInstanceId) {
         try {
             ProcessInstance processInstance = runtimeService.createProcessInstanceQuery().processInstanceId(processInstanceId).singleResult();
@@ -122,6 +149,30 @@ public class ProcessServiceImpl implements ProcessService {
                     false,
                     HttpStatus.OK.toString(),
                     "Start process instance successfully",
+                    result
+            );
+            return ResponseEntity.status(HttpStatus.OK).body(response);
+        } catch (Exception e) {
+            ResponseModel<ProcessInstanceDTO> response = new ResponseModel<>(
+                    true,
+                    HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+                    e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @Override
+    public ResponseEntity<ResponseModel<ProcessInstanceDTO>> startProcessInstance(String processDefinitionKey, String businessKey, Map<String, Object> variables) {
+        try {
+            ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(processDefinitionKey, businessKey, variables);
+//            System.out.println(variables);
+//            System.out.println("Variables: " + runtimeService.getVariables(processInstance.getId()));
+//            runtimeService.setVariables(processInstance.getId(), variables);
+            ProcessInstanceDTO result = processInstanceMapper.toDto(processInstance);
+            ResponseModel<ProcessInstanceDTO> response = new ResponseModel<>(
+                    false,
+                    HttpStatus.OK.toString(),
+                    "Start process instance with variables successfully",
                     result
             );
             return ResponseEntity.status(HttpStatus.OK).body(response);
