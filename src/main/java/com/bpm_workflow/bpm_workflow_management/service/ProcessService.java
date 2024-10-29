@@ -20,6 +20,8 @@ public interface ProcessService {
 
     ResponseEntity<ResponseModel<ProcessInstanceDTO>> getProcessInstance(String processInstanceId);
 
+    ResponseEntity<ResponseModel<List<ProcessInstanceDTO>>> getProcessesByBusinessKey(String businessKey);
+
     ResponseEntity<ResponseModel<ProcessInstanceDTO>> startProcessInstance(String processDefinitionKey, String businessKey);
 
     ResponseEntity<ResponseModel<ProcessInstanceDTO>> startProcessInstance(String processDefinitionKey, String businessKey, Map<String, Object> variables);
@@ -27,6 +29,8 @@ public interface ProcessService {
     ResponseEntity<String> deployProcess(MultipartFile file);
 
     ResponseEntity<String> deleteAllDeployments();
+
+    ResponseEntity<String> deleteProcessInstance(String processInstanceId, String deleteReason);
 
     ResponseEntity<String> deleteDeployment(String deploymentId);
 

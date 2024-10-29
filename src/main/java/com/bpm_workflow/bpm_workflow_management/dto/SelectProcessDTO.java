@@ -29,4 +29,5 @@ public class SelectProcessDTO {
         this.businessKey = businessKey;
         this.variables = variables;
     }
+
 }

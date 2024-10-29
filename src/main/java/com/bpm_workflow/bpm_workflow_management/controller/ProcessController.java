@@ -13,7 +13,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/processes")
@@ -52,6 +54,14 @@ public class ProcessController {
         return processService.getAllCompletedProcesses();
     }
 
+    @Operation(summary = "Get Processes with Business Key", description = "Get all process instances with a given business key.")
+    @GetMapping("/active/{businessKey}")
+    public ResponseEntity<ResponseModel<List<ProcessInstanceDTO>>> getAllProcessesByBusinessKey(
+            @PathVariable String businessKey
+    ) {
+        return processService.getProcessesByBusinessKey(businessKey);
+    }
+
     @Operation(summary = "Start Process Instance", description = "Start a process instance")
     @PostMapping("/start/{processDefinitionKey}")
     public ResponseEntity<ResponseModel<ProcessInstanceDTO>> startProcessInstance(
@@ -59,6 +69,11 @@ public class ProcessController {
             @RequestBody SelectProcessDTO request
     ) {
         if(request.getVariables() != null) {
+            Map<String, Object> userVariables = request.getVariables();
+            userVariables.putIfAbsent("metadata", new HashMap<String, Object>());
+
+            request.setVariables(userVariables);
+            System.out.println(request.getVariables());
             return processService.startProcessInstance(processDefinitionKey, request.getBusinessKey(), request.getVariables());
         }
         return processService.startProcessInstance(processDefinitionKey, request.getBusinessKey());
@@ -68,6 +83,15 @@ public class ProcessController {
     @DeleteMapping("/deployments/{deploymentId}")
     public ResponseEntity<String> deleteDeployment(@PathVariable String deploymentId) {
         return processService.deleteDeployment(deploymentId);
+    }
+
+    @Operation(summary = "Delete a Process Instance", description = "Delete a process instance using process instance ID")
+    @DeleteMapping("/instance/{processInstanceId}")
+    public ResponseEntity<String> deleteProcessInstance(
+            @PathVariable String processInstanceId,
+            @RequestBody String deleteReason
+    ) {
+        return processService.deleteProcessInstance(processInstanceId, deleteReason);
     }
 
     @Operation(summary = "Delete All Deployed Processes", description = "Delete all deployed processes")
