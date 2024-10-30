@@ -7,6 +7,7 @@ import com.bpm_workflow.bpm_workflow_management.service.ProcessService;
 import com.bpm_workflow.bpm_workflow_management.util.Helpers;
 import com.bpm_workflow.bpm_workflow_management.util.ProcessDefinitionMapper;
 import com.bpm_workflow.bpm_workflow_management.util.ProcessInstanceMapper;
+import org.activiti.engine.ActivitiException;
 import org.activiti.engine.HistoryService;
 import org.activiti.engine.RepositoryService;
 import org.activiti.engine.RuntimeService;
@@ -67,6 +68,15 @@ public class ProcessServiceImpl implements ProcessService {
                     result);
             logger.info("Successfully retrieved {} deployed processes.", result.size());
             return ResponseEntity.status(HttpStatus.OK).body(response);
+        } catch (ActivitiException activitiException) {
+            logger.error("Activiti operation failed: {}", activitiException.getMessage(), activitiException);
+            List<ProcessDefinitionDTO> emptyList = new ArrayList<>();
+            ResponseModel<List<ProcessDefinitionDTO>> response = new ResponseModel<>(
+                    true,
+                    HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+                    activitiException.getMessage(),
+                    emptyList);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         } catch (Exception e) {
             logger.error("Failed to retrieve deployed processes. Error: {}", e.getMessage(), e);
             List<ProcessDefinitionDTO> emptyList = new ArrayList<>();
@@ -95,6 +105,15 @@ public class ProcessServiceImpl implements ProcessService {
                     result
             );
             return ResponseEntity.status(HttpStatus.OK).body(response);
+        } catch (ActivitiException activitiException) {
+            logger.error("Activiti operation failed: {}", activitiException.getMessage(), activitiException);
+            List<ProcessInstanceDTO> emptyList = new ArrayList<>();
+            ResponseModel<List<ProcessInstanceDTO>> response = new ResponseModel<>(
+                    true,
+                    HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+                    activitiException.getMessage(),
+                    emptyList);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         } catch (Exception e) {
             logger.error("Error fetching active processes: {}", e.getMessage());
             List<ProcessInstanceDTO> emptyList = new ArrayList<>();
@@ -195,6 +214,13 @@ public class ProcessServiceImpl implements ProcessService {
                     result
             );
             return ResponseEntity.status(HttpStatus.OK).body(response);
+        } catch (ActivitiException activitiException) {
+            logger.error("Activiti operation failed: {}", activitiException.getMessage(), activitiException);
+            ResponseModel<ProcessInstanceDTO> response = new ResponseModel<>(
+                    true,
+                    HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+                    activitiException.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         } catch (Exception e) {
             logger.error("Error starting process instance with definition key {} and business key {}: {}", processDefinitionKey, businessKey, e.getMessage());
             ResponseModel<ProcessInstanceDTO> response = new ResponseModel<>(
@@ -222,6 +248,13 @@ public class ProcessServiceImpl implements ProcessService {
                     result
             );
             return ResponseEntity.status(HttpStatus.OK).body(response);
+        } catch (ActivitiException activitiException) {
+            logger.error("Activiti operation failed: {}", activitiException.getMessage(), activitiException);
+            ResponseModel<ProcessInstanceDTO> response = new ResponseModel<>(
+                    true,
+                    HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+                    activitiException.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         } catch (Exception e) {
             logger.error("Error starting process instance with definition key {}, business key {}, and variables {}: {}", processDefinitionKey, businessKey, variables, e.getMessage());
             ResponseModel<ProcessInstanceDTO> response = new ResponseModel<>(
@@ -246,9 +279,11 @@ public class ProcessServiceImpl implements ProcessService {
                     .name(file.getOriginalFilename())
                     .deploy();
 
-            System.out.println("Deployed process: " + deployment.toString());
             logger.info("Successfully deployed process: {}", deployment.getId());
             return ResponseEntity.status(HttpStatus.OK).body(deployment.toString());
+        } catch (ActivitiException activitiException) {
+            logger.error("Activiti operation failed: {}", activitiException.getMessage(), activitiException);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(activitiException.getMessage());
         } catch (Exception e) {
             logger.error("Error deploying process with file {}: {}", file.getOriginalFilename(), e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -269,6 +304,9 @@ public class ProcessServiceImpl implements ProcessService {
             }
             logger.info("Successfully deleted all deployments.");
             return ResponseEntity.ok(deployments.toString());
+        } catch (ActivitiException activitiException) {
+            logger.error("Activiti operation failed: {}", activitiException.getMessage(), activitiException);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(activitiException.getMessage());
         } catch (Exception e) {
             logger.error("Error deleting all deployments: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -282,6 +320,9 @@ public class ProcessServiceImpl implements ProcessService {
             runtimeService.deleteProcessInstance(processInstanceId, deleteReason);
             logger.info("Successfully deleted process instance: {}", processInstanceId);
             return ResponseEntity.ok("Process instance deleted!");
+        } catch (ActivitiException activitiException) {
+            logger.error("Activiti operation failed: {}", activitiException.getMessage(), activitiException);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(activitiException.getMessage());
         } catch (Exception e) {
             logger.error("Error deleting process instance {}: {}", processInstanceId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -295,6 +336,9 @@ public class ProcessServiceImpl implements ProcessService {
             repositoryService.deleteDeployment(deploymentId, true);
             logger.info("Successfully deleted deployment: {}", deploymentId);
             return ResponseEntity.ok("Deployment deleted!");
+        } catch (ActivitiException activitiException) {
+            logger.error("Activiti operation failed: {}", activitiException.getMessage(), activitiException);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(activitiException.getMessage());
         } catch (Exception e) {
             logger.error("Error deleting deployment {}: {}", deploymentId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
