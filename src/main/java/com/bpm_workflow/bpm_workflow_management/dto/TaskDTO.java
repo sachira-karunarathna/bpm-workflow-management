@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -32,6 +33,7 @@ public class TaskDTO {
     private String taskDefinitionKey;
     private Map<String, Object> processVariables;
     private Map<String, Object> taskLocalVariables;
+    private List<FormPropertyDTO> variables;
 
     public TaskDTO(Integer priority, String name, String owner, String tenantId, Integer appVersion, String delegationState, String description, Boolean suspended, String assignee, Date dueDate, String parentTaskId, String category, String formKey, String id, String executionId, Date createTime, String businessKey, String processDefinitionId, Date claimTime, String processInstanceId, String taskDefinitionKey, Map<String, Object> processVariables, Map<String, Object> taskLocalVariables) {
         this.priority = priority;
@@ -57,5 +59,32 @@ public class TaskDTO {
         this.taskDefinitionKey = taskDefinitionKey;
         this.processVariables = processVariables;
         this.taskLocalVariables = taskLocalVariables;
+    }
+
+    public TaskDTO(Integer priority, String name, String owner, String tenantId, Integer appVersion, String delegationState, String description, Boolean suspended, String assignee, Date dueDate, String parentTaskId, String category, String formKey, String id, String executionId, Date createTime, String businessKey, String processDefinitionId, Date claimTime, String processInstanceId, String taskDefinitionKey, Map<String, Object> processVariables, Map<String, Object> taskLocalVariables, List<FormPropertyDTO> variables) {
+        this.priority = priority;
+        this.name = name;
+        this.owner = owner;
+        this.tenantId = tenantId;
+        this.appVersion = appVersion;
+        this.delegationState = delegationState;
+        this.description = description;
+        this.suspended = suspended;
+        this.assignee = assignee;
+        this.dueDate = dueDate;
+        this.parentTaskId = parentTaskId;
+        this.category = category;
+        this.formKey = formKey;
+        this.id = id;
+        this.executionId = executionId;
+        this.createTime = createTime;
+        this.businessKey = businessKey;
+        this.processDefinitionId = processDefinitionId;
+        this.claimTime = claimTime;
+        this.processInstanceId = processInstanceId;
+        this.taskDefinitionKey = taskDefinitionKey;
+        this.processVariables = processVariables;
+        this.taskLocalVariables = taskLocalVariables;
+        this.variables = variables;
     }
 }

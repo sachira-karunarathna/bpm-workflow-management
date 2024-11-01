@@ -1,6 +1,7 @@
 package com.bpm_workflow.bpm_workflow_management.controller;
 
 import com.bpm_workflow.bpm_workflow_management.dto.FlowElementDTO;
+import com.bpm_workflow.bpm_workflow_management.dto.FormPropertyDTO;
 import com.bpm_workflow.bpm_workflow_management.dto.ResponseModel;
 import com.bpm_workflow.bpm_workflow_management.dto.TaskDTO;
 import com.bpm_workflow.bpm_workflow_management.service.TasksService;
@@ -52,13 +53,21 @@ public class TasksController {
         return tasksService.getAllCurrentTasks(processInstanceId);
     }
 
-    @Operation(summary = "Next Tasks of the Process", description = "Get next tasks of the given process and current task")
-    @GetMapping("/next")
-    public ResponseEntity<ResponseModel<List<FlowElementDTO>>> getNextTasks(
+    @Operation(summary = "Next Possible Tasks of the Process", description = "Get next possible tasks of the given process and current task")
+    @GetMapping("/next-possible-tasks")
+    public ResponseEntity<ResponseModel<List<FlowElementDTO>>> getNextPossibleTasks(
             @RequestParam String currentTaskId
     ) {
-        return tasksService.getNextTasks(currentTaskId);
+        return tasksService.getPossibleNextTasks(currentTaskId);
     }
+
+//    @Operation(summary = "Next Tasks of the Process", description = "Get next tasks of the given process and current task")
+//    @GetMapping("/next")
+//    public ResponseEntity<ResponseModel<List<FlowElementDTO>>> getNextTasks(
+//            @RequestParam String currentTaskId
+//    ) {
+//        return tasksService.getNextTasks(currentTaskId);
+//    }
 
     @Operation(summary = "Historic Activities of a Process", description = "Get all historic activities of a given process")
     @GetMapping("/historic-activities")
@@ -69,21 +78,20 @@ public class TasksController {
     }
 
     @Operation(summary = "Form Properties of a Task", description = "Get all form properties of a given task ID.")
-    @GetMapping("/task-form-properties/{processDefinitionId}")
-    public ResponseEntity<ResponseModel<List<FormProperty>>> getTaskFormProperties(
-            @PathVariable String processDefinitionId,
+    @GetMapping("/task-form-properties")
+    public ResponseEntity<ResponseModel<List<FormPropertyDTO>>> getTaskFormProperties(
             @RequestParam String taskId
     ) {
-        return tasksService.getTaskFormProperties(processDefinitionId, taskId);
+        return tasksService.getTaskFormProperties(taskId);
     }
 
-    @Operation(summary = "Variables of a Task by Task ID", description = "Get all variables of a given task ID.")
-    @GetMapping("/task-variables-by-task-id/{taskId}")
-    public ResponseEntity<ResponseModel<Map<String, Object>>> getVariablesOfATaskByTaskId(
-            @PathVariable String taskId
-    ) {
-        return tasksService.getTaskVariablesByTaskId(taskId);
-    }
+//    @Operation(summary = "Variables of a Task by Task ID", description = "Get all variables of a given task ID.")
+//    @GetMapping("/task-variables-by-task-id/{taskId}")
+//    public ResponseEntity<ResponseModel<Map<String, Object>>> getVariablesOfATaskByTaskId(
+//            @PathVariable String taskId
+//    ) {
+//        return tasksService.getTaskVariablesByTaskId(taskId);
+//    }
 
     @Operation(summary = "Complete a Task", description = "Completed a task of a process instance")
     @PostMapping("/complete/{taskId}")

@@ -1,13 +1,14 @@
 package com.bpm_workflow.bpm_workflow_management.service.impl;
 
 import com.bpm_workflow.bpm_workflow_management.dto.FlowElementDTO;
+import com.bpm_workflow.bpm_workflow_management.dto.FormPropertyDTO;
 import com.bpm_workflow.bpm_workflow_management.dto.ResponseModel;
 import com.bpm_workflow.bpm_workflow_management.dto.TaskDTO;
 import com.bpm_workflow.bpm_workflow_management.service.TasksService;
 import com.bpm_workflow.bpm_workflow_management.util.FlowElementMapper;
+import com.bpm_workflow.bpm_workflow_management.util.FormPropertyMapper;
 import com.bpm_workflow.bpm_workflow_management.util.TaskMapper;
 import org.activiti.bpmn.model.*;
-import org.activiti.bpmn.model.Process;
 import org.activiti.engine.*;
 import org.activiti.engine.history.HistoricActivityInstance;
 import org.activiti.engine.history.HistoricTaskInstance;
@@ -39,19 +40,24 @@ public class TasksServiceImpl implements TasksService {
 
     private final FlowElementMapper flowElementMapper;
 
+    private final FormPropertyMapper formPropertyMapper;
+
     @Autowired
     public TasksServiceImpl(TaskService taskService,
                             RuntimeService runtimeService,
                             HistoryService historyService,
                             RepositoryService repositoryService,
                             TaskMapper taskMapper,
-                            FlowElementMapper flowElementMapper) {
+                            FlowElementMapper flowElementMapper,
+                            FormPropertyMapper formPropertyMapper
+    ) {
         this.taskService = taskService;
         this.runtimeService = runtimeService;
         this.historyService = historyService;
         this.repositoryService = repositoryService;
         this.taskMapper = taskMapper;
         this.flowElementMapper = flowElementMapper;
+        this.formPropertyMapper = formPropertyMapper;
     }
 
     @Override
@@ -115,7 +121,10 @@ public class TasksServiceImpl implements TasksService {
             List<Task> currentTasks = taskService.createTaskQuery()
                     .processInstanceId(processInstanceId)
                     .list();
-            List<TaskDTO> result = currentTasks.stream().map(taskMapper::toDto).toList();
+            List<TaskDTO> result = currentTasks.stream().map(task -> {
+                List<FormPropertyDTO> formProperties = getFormPropertiesOfTask(task.getId());
+                return taskMapper.toDtoWithVariables(task, formProperties);
+            }).toList();
             logger.info("Successfully retrieved {} current tasks for processInstanceId: {}", result.size(), processInstanceId);
             ResponseModel<List<TaskDTO>> response = new ResponseModel<>(
                     false,
@@ -132,6 +141,67 @@ public class TasksServiceImpl implements TasksService {
                     e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
+    }
+
+    @Override
+    public ResponseEntity<ResponseModel<List<FlowElementDTO>>> getPossibleNextTasks(String currentTaskId) {
+        logger.info("Fetching next possible tasks for current task ID: {}", currentTaskId);
+        try {
+            Task currentTask = taskService.createTaskQuery().taskId(currentTaskId).singleResult();
+            String processInstanceId = currentTask.getProcessInstanceId();
+            String processDefinitionId = runtimeService.createProcessInstanceQuery()
+                    .processInstanceId(processInstanceId)
+                    .singleResult()
+                    .getProcessDefinitionId();
+
+            BpmnModel bpmnModel = repositoryService.getBpmnModel(processDefinitionId);
+            List<FlowElement> possibleNextTasks = new ArrayList<>();
+            List<FlowElement> flowElements = new ArrayList<>(bpmnModel.getMainProcess().getFlowElements());
+
+            findNextElements(currentTask.getTaskDefinitionKey(), flowElements, possibleNextTasks);
+            List<FlowElementDTO> results = possibleNextTasks.stream().map(flowElementMapper::toDto).toList();
+            logger.info("Successfully retrieved {} next tasks for current task ID: {}", results.size(), currentTaskId);
+            ResponseModel<List<FlowElementDTO>> response = new ResponseModel<>(
+                    false,
+                    HttpStatus.OK.toString(),
+                    "Next possible tasks retrieved successfully!",
+                    results);
+            return ResponseEntity.status(HttpStatus.OK).body(response);
+        } catch (Exception e) {
+            logger.error("Error fetching next tasks for current task {}: {}", currentTaskId, e.getMessage());
+            ResponseModel<List<FlowElementDTO>> response = new ResponseModel<>(
+                    true,
+                    HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+                    e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    private void findNextElements(String elementId, List<FlowElement> flowElements, List<FlowElement> possibleTasks) {
+        for (FlowElement element : flowElements) {
+            if (element instanceof SequenceFlow) {
+                SequenceFlow sequenceFlow = (SequenceFlow) element;
+                if (sequenceFlow.getSourceRef().equals(elementId)) {
+                    String targetRef = sequenceFlow.getTargetRef();
+
+                    for (FlowElement targetElement : flowElements) {
+                        if (targetElement.getId().equals(targetRef)) {
+                            if (targetElement instanceof UserTask || targetElement instanceof ServiceTask || targetElement instanceof EndEvent) {
+                                possibleTasks.add(targetElement);
+                            }
+                            else if (targetElement instanceof Gateway) {
+                                findNextElements(targetElement.getId(), flowElements, possibleTasks);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    public Task getTaskByTaskDefinitionKey(String taskDefinitionKey) {
+        return taskService.createTaskQuery().taskDefinitionKey(taskDefinitionKey).singleResult();
     }
 
     @Override
@@ -162,7 +232,7 @@ public class TasksServiceImpl implements TasksService {
                         String targetRef = sequenceFlow.getTargetRef();
                         for (FlowElement targetElement : flowElements) {
 //                            ToDo: Remove instanceof UserTask
-                            if (targetElement.getId().equals(targetRef) && targetElement instanceof UserTask) {
+                            if (targetElement.getId().equals(targetRef) && (targetElement instanceof UserTask || targetElement instanceof ServiceTask || targetElement instanceof Gateway)) {
                                 elmentList.add(targetElement);
                             }
                         }
@@ -170,6 +240,10 @@ public class TasksServiceImpl implements TasksService {
                 }
             }
             List<FlowElementDTO> results = elmentList.stream().map(flowElementMapper::toDto).toList();
+//            List<TaskDTO> taskResults = results.stream().map(flowElement -> {
+//                Task task = getTaskByTaskDefinitionKey(flowElement.getId());
+//                return taskMapper.toDto(task);
+//            }).toList();
             logger.info("Successfully retrieved {} next tasks for current task ID: {}", results.size(), currentTaskId);
             ResponseModel<List<FlowElementDTO>> response = new ResponseModel<>(
                     false,
@@ -215,32 +289,34 @@ public class TasksServiceImpl implements TasksService {
     }
 
     @Override
-    public ResponseEntity<ResponseModel<List<FormProperty>>> getTaskFormProperties(String processDefinitionId, String taskId) {
-        logger.info("Fetching variables for execution ID: {}", taskId);
+    public ResponseEntity<ResponseModel<List<FormPropertyDTO>>> getTaskFormProperties(String taskId) {
+        logger.info("Fetching form properties for task ID: {}", taskId);
         try {
-            Map<String, Object> variables = runtimeService.getVariables(taskId);
-
-            BpmnModel bpmnModel = repositoryService.getBpmnModel(processDefinitionId);
             List<FormProperty> formProperties = new ArrayList<>();
-            for (Process process : bpmnModel.getProcesses()) {
-                UserTask userTask = (UserTask) process.getFlowElement(taskId);
-                if (userTask != null) {
-                    formProperties = userTask.getFormProperties();
-                    break;
-                }
+            Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
+            String processDefinitionId = task.getProcessDefinitionId();
+            BpmnModel bpmnModel = repositoryService.getBpmnModel(processDefinitionId);
+            UserTask userTask = (UserTask) bpmnModel.getFlowElement(task.getTaskDefinitionKey());
+
+            if (userTask != null && userTask.getFormProperties() != null) {
+                formProperties.addAll(userTask.getFormProperties());
+            } else {
+                System.out.println("No form properties defined for this task.");
             }
 
-            ResponseModel<List<FormProperty>> response = new ResponseModel<>(
+            List<FormPropertyDTO> results = formProperties.stream().map(formPropertyMapper::toDto).toList();
+
+            ResponseModel<List<FormPropertyDTO>> response = new ResponseModel<>(
                     false,
                     HttpStatus.OK.toString(),
-                    "Task variables retrieved successfully",
-                    formProperties
+                    "Form properties retrieved successfully",
+                    results
             );
-            logger.info("Successfully retrieved variables for execution ID: {}", taskId);
+            logger.info("Successfully retrieved form properties for task ID: {}", taskId);
             return ResponseEntity.status(HttpStatus.OK).body(response);
         } catch (ActivitiException activitiException) {
-            logger.error("Failed to retrieve task variables. Activiti error: {}", activitiException.getMessage(), activitiException);
-            ResponseModel<List<FormProperty>> response = new ResponseModel<>(
+            logger.error("Failed to retrieve form properties. Activiti error: {}", activitiException.getMessage(), activitiException);
+            ResponseModel<List<FormPropertyDTO>> response = new ResponseModel<>(
                     true,
                     HttpStatus.INTERNAL_SERVER_ERROR.toString(),
                     activitiException.getMessage(),
@@ -248,14 +324,43 @@ public class TasksServiceImpl implements TasksService {
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         } catch (Exception e) {
-            logger.error("Error retrieving task variables for execution ID {}: {}", taskId, e.getMessage(), e);
-            ResponseModel<List<FormProperty>> response = new ResponseModel<>(
+            logger.error("Error retrieving form properties for task ID {}: {}", taskId, e.getMessage(), e);
+            ResponseModel<List<FormPropertyDTO>> response = new ResponseModel<>(
                     true,
                     HttpStatus.INTERNAL_SERVER_ERROR.toString(),
                     e.getMessage(),
                     null
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @Override
+    public List<FormPropertyDTO> getFormPropertiesOfTask(String taskId) {
+        logger.info("Fetching form properties for task ID: {}", taskId);
+        try {
+            List<FormProperty> formProperties = new ArrayList<>();
+            Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
+            String processDefinitionId = task.getProcessDefinitionId();
+            BpmnModel bpmnModel = repositoryService.getBpmnModel(processDefinitionId);
+            UserTask userTask = (UserTask) bpmnModel.getFlowElement(task.getTaskDefinitionKey());
+
+            if (userTask != null && userTask.getFormProperties() != null) {
+                formProperties.addAll(userTask.getFormProperties());
+            } else {
+                System.out.println("No form properties defined for this task.");
+            }
+
+            List<FormPropertyDTO> results = formProperties.stream().map(formPropertyMapper::toDto).toList();
+
+            logger.info("Successfully retrieved form properties for task ID: {}", taskId);
+            return results;
+        } catch (ActivitiException activitiException) {
+            logger.error("Failed to retrieve form properties. Activiti error: {}", activitiException.getMessage(), activitiException);
+            return null;
+        } catch (Exception e) {
+            logger.error("Error retrieving form properties for task ID {}: {}", taskId, e.getMessage(), e);
+            return null;
         }
     }
 
